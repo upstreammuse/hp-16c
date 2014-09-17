@@ -1,0 +1,70 @@
+; todo rewrite to use / at first, checking carry flag instead of modulo, and
+; preventing having to modulo and then divide again
+
+; todo use sqrt optimization
+
+; X - number to factor
+; I - register to store current factor to
+; R0-R(i) - array of factors
+; finishes with X = I
+
+; References	XYZT I L
+; A dash '-' indicates a Don't Care value
+
+	; initialize I and R0
+LBL A
+0		0N-- - -
+STO I		0N-- - -
+Rv		N--- - -
+2		2N-- 0 -
+STO 0		2N-- 0 -
+Rv		N--- 0 -
+	; from here on, I indexes the registers R0..R(i) as an array
+
+	; try to divide current N by the current factor R(i)
+LBL B
+	; if N is 1, finish
+1		1N-- I -
+x=y
+GTO D
+Rv		N--- I -
+
+	; modulo the number by the current factor
+ENTER		NN-- I -
+ENTER		NNN- I -
+RCL(i)		FNN- I -
+	; M=N%F
+RMD		MN-- I -
+
+	; if M is zero, move to the next factor
+X=0
+GTO C
+	; otherwise increment current factor and continue
+Rv		N--- I -
+RCL(i)          FN-- I -
+1		1FN- I -
+	; G=F+1
++		GN-- I -
+STO(i)		GN-- I -
+Rv		N--- I -
+GTO B
+
+	; on successful factor, divide the factor out and save that factor
+	; to the next register, incrementing I to use the new factor, and
+	; allowing multiple powers of the same factor in the R array
+LBL C
+		0N-- I -
+Rv		N--- I -
+RCL(i)		FN-- I -
+	; M=N/F
+/		M--- I -
+RCL(i)		FM-- I -
+	; J=I+1
+ISZ		FM-- J -
+STO(i)
+Rv		M--- J -
+GTO B
+
+LBL D
+DSZ
+RCL I		I---- - -
