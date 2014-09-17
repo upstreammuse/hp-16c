@@ -1,7 +1,5 @@
-; todo rewrite to use / at first, checking carry flag instead of modulo, and
-; preventing having to modulo and then divide again
-
 ; todo use sqrt optimization
+; todo use swaps instead of load/store/drop
 
 ; X - number to factor
 ; I - register to store current factor to
@@ -29,17 +27,19 @@ x=y
 GTO D
 Rv		N--- I -
 
-	; modulo the number by the current factor
+	; divide by the current factor
 ENTER		NN-- I -
 ENTER		NNN- I -
 RCL(i)		FNN- I -
-	; M=N%F
-RMD		MN-- I -
+	; M = N / F
+/		MN-- I F
+	; if carry set, we don't have a factor, else we do
+F?4
+GOTO E
+GOTO C
 
-	; if M is zero, move to the next factor
-X=0
-GTO C
 	; otherwise increment current factor and continue
+LBL E
 Rv		N--- I -
 RCL(i)          FN-- I -
 1		1FN- I -
@@ -49,19 +49,14 @@ STO(i)		GN-- I -
 Rv		N--- I -
 GTO B
 
-	; on successful factor, divide the factor out and save that factor
-	; to the next register, incrementing I to use the new factor, and
-	; allowing multiple powers of the same factor in the R array
+	; on an exact divide, whatever the factor was, save it to the next
+	; register and increment the index for the next go round
 LBL C
-		0N-- I -
-Rv		N--- I -
-RCL(i)		FN-- I -
-	; M=N/F
-/		M--- I -
-RCL(i)		FM-- I -
-	; J=I+1
-ISZ		FM-- J -
-STO(i)
+		MN-- I F
+LSTx		FMN- I -
+	; J = I + 1
+ISZ		FMN- J -
+STO(i)		FMN- J -
 Rv		M--- J -
 GTO B
 
