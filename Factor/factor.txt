@@ -1,5 +1,5 @@
 ; todo use sqrt optimization
-; todo use swaps instead of load/store/drop
+; todo crashes with 30 as input, debug time!
 
 ; X - number to factor
 ; I - register to store current factor to
@@ -10,56 +10,61 @@
 ; A dash '-' indicates a Don't Care value
 
 	; initialize I and R0
-LBL A
-0		0N-- - -
-STO I		0N-- - -
-Rv		N--- - -
-2		2N-- 0 -
-STO 0		2N-- 0 -
-Rv		N--- 0 -
-	; from here on, I indexes the registers R0..R(i) as an array
+LBL A		N--- - -
+X<>I		---- N -
+0		0--- N -
+X<>I		N--- 0 -
+X<>i		---- 0 -	N
+2		2--- 0 -	N
+X<>i		N--- 0 -	2
 
-	; try to divide current N by the current factor R(i)
-LBL B
+	; top of the factorization loop
+LBL B		N--- I -	... F
+
 	; if N is 1, finish
-1		1N-- I -
+1		1N-- I -	... F
 x=y
 GTO D
-Rv		N--- I -
+Rv		N--- I -	... F
 
 	; divide by the current factor
-ENTER		NN-- I -
-ENTER		NNN- I -
-RCL(i)		FNN- I -
+ENTER		NN-- I -	... F
+ENTER		NNN- I -	... F
+RCL(i)		FNN- I -	... F
+
 	; M = N / F
-/		MN-- I F
+/		MN-- I F	... F
+
 	; if carry set, we don't have a factor, else we do
 F?4
 GOTO E
 GOTO C
 
-	; otherwise increment current factor and continue
-LBL E
-Rv		N--- I -
-RCL(i)          FN-- I -
-1		1FN- I -
-	; G=F+1
-+		GN-- I -
-STO(i)		GN-- I -
-Rv		N--- I -
+	; increment current factor and continue
+LBL E		MN-- I F	... F
+Rv		N--- I -	... F
+X<>i		F--- I -	... N
+1		1F-- I -	... N
+
+	; G = F + 1
++		G--- I -	... N
+X<>i		N--- I -	... G
 GTO B
 
 	; on an exact divide, whatever the factor was, save it to the next
 	; register and increment the index for the next go round
-LBL C
-		MN-- I F
-LSTx		FMN- I -
+LBL C		MN-- I F	... F
+LSTx		FMN- I -	... F
+
 	; J = I + 1
-ISZ		FMN- J -
-STO(i)		FMN- J -
-Rv		M--- J -
+ISZ		FMN- J -	... F
+STO(i)		FMN- J -	... F F
+Rv		M--- J -	... F F
+
+	; N = M, I = J
 GTO B
 
+	; Return the number of factors
 LBL D
 DSZ
 RCL I		I---- - -
